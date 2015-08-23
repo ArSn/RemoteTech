@@ -101,6 +101,13 @@ namespace RemoteTech.Modules
         [KSPField] // Persistence handled by Save()
         public Guid RTAntennaTarget = Guid.Empty;
 
+        // workarround for ksp 1.0
+        [KSPField]
+        public float
+            RTPacketInterval = 0.0f,
+            RTPacketSize = 0.0f,
+            RTPacketResourceCost = 0.0f;
+
         public int[] mDeployFxModuleIndices, mProgressFxModuleIndices;
         private List<IScalarModule> mDeployFxModules = new List<IScalarModule>();
         private List<IScalarModule> mProgressFxModules = new List<IScalarModule>();
@@ -259,6 +266,16 @@ namespace RemoteTech.Modules
                 RTLog.Notify("ModuleRTAntenna: Found TRANSMITTER block.");
                 mTransmitterConfig = node.GetNode("TRANSMITTER");
                 mTransmitterConfig.AddValue("name", "ModuleRTDataTransmitter");
+
+                // workarround for ksp 1.0
+                if (mTransmitterConfig.HasValue("PacketInterval"))
+                    RTPacketInterval = float.Parse(mTransmitterConfig.GetValue("PacketInterval"));
+
+                if (mTransmitterConfig.HasValue("PacketSize"))
+                    RTPacketSize = float.Parse(mTransmitterConfig.GetValue("PacketSize"));
+
+                if (mTransmitterConfig.HasValue("PacketResourceCost"))
+                    RTPacketResourceCost = float.Parse(mTransmitterConfig.GetValue("PacketResourceCost"));
             }
         }
 
@@ -294,6 +311,16 @@ namespace RemoteTech.Modules
             Fields["GUI_DishRange"].guiActive = (Mode1DishRange > 0) && ShowGUI_DishRange;
             Fields["GUI_EnergyReq"].guiActive = (EnergyCost > 0) && ShowGUI_EnergyReq;
             Fields["GUI_Status"].guiActive = ShowGUI_Status;
+
+            // workarround for ksp 1.0
+            if (mTransmitterConfig == null)
+            {
+                mTransmitterConfig = new ConfigNode("TRANSMITTER");
+                mTransmitterConfig.AddValue("PacketInterval", RTPacketInterval);
+                mTransmitterConfig.AddValue("PacketSize", RTPacketSize);
+                mTransmitterConfig.AddValue("PacketResourceCost", RTPacketResourceCost);
+                mTransmitterConfig.AddValue("name", "ModuleRTDataTransmitter");
+            }
 
             if (RTCore.Instance != null)
             {
@@ -331,6 +358,8 @@ namespace RemoteTech.Modules
                 part.AddModule(copy);
                 AddTransmitter();
                 RTLog.Notify("ModuleRTAntenna: Add TRANSMITTER success.");
+                // Trigger onVesselWasModified after adding a new transmitter
+                GameEvents.onVesselWasModified.Fire(this.part.vessel);
             }
         }
 
@@ -338,8 +367,11 @@ namespace RemoteTech.Modules
         {
             RTLog.Notify("ModuleRTAntenna: Remove TRANSMITTER success.");
             if (mTransmitter == null) return;
+
             part.RemoveModule((PartModule) mTransmitter);
             mTransmitter = null;
+            // Trigger onVesselWasModified after removing the transmitter
+            GameEvents.onVesselWasModified.Fire(this.part.vessel);
         }
 
         private State UpdateControlState()
@@ -421,7 +453,7 @@ namespace RemoteTech.Modules
         /// <summary>
         /// Determines whether or not the antenna is shielded from aerodynamic forces
         /// </summary>
-        /// <returns><c>true</c>, if the antenna is shielded by a supported mod, <c>false</c> otherwise.</returns>
+        /// <returns><c>true</c>, if the antenna is shielded, <c>false</c> otherwise.</returns>
         ///
         /// <precondition><c>this.part</c> is not null</precondition>
         ///
@@ -430,17 +462,22 @@ namespace RemoteTech.Modules
         {
             PartModule FARPartModule = GetFARModule();
 
-            if (FARPartModule != null) {
-                try {
-                    FieldInfo fi = FARPartModule.GetType ().GetField ("isShielded");
-                    return (bool)(fi.GetValue (FARPartModule));
-                } catch (Exception e) {
-                    RTLog.Notify ("GetShieldedState: {0}", e);
-                    return false;
+            if (FARPartModule != null)
+            {
+                try
+                {
+                    FieldInfo fi = FARPartModule.GetType().GetField("isShielded");
+                    return (bool)(fi.GetValue(FARPartModule));
                 }
-            } else {
-                return false;
+                catch (Exception e)
+                {
+                    RTLog.Notify("GetShieldedState: {0}", e);
+                    // otherwise go further and try to get the stock shielded value
+                }
             }
+
+            // For KSP 1.0
+            return this.part.ShieldedFromAirstream;
         }
 
         /// <summary>
@@ -476,19 +513,16 @@ namespace RemoteTech.Modules
         {
             var modules = new List<IScalarModule>();
             if (indices == null) return modules;
-            foreach (int i in indices)
+
+            foreach (PartModule partModule in this.part.Modules)
             {
-                var item = base.part.Modules[i] as IScalarModule;
-                if (item != null)
-                {
-                    item.SetUIWrite(showUI);
-                    item.SetUIRead(showUI);
-                    modules.Add(item);
-                }
-                else
-                {
-                    RTLog.Notify("ModuleRTAntenna: Part Module {0} doesn't implement IScalarModule", part.Modules[i].name);
-                }
+                var item = partModule as IScalarModule;
+                // skip this module if it has no IScalarModule
+                if (item == null) continue;
+                
+                item.SetUIWrite(showUI);
+                item.SetUIRead(showUI);
+                modules.Add(item);
             }
             return modules;
         }

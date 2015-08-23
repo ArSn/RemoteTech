@@ -1,3 +1,82 @@
+Version 1.6.7
+========================================
+Released June 25, 2015
+
+Bug fixes
+--------------------
+- Fixed a problem for transmitting science data in combination with ScienceAlert
+
+General
+--------------------
+- KSP 1.0.4 update
+
+
+Version 1.6.6
+========================================
+Released June 21, 2015
+
+Bug fixes
+--------------------
+- Fixed an exception-Spamming for `HideGroundStationsBehindBody = true` with RSS
+- Fixed the animation for Fasa's Explorer probe
+
+General
+--------------------
+- Added CactEye probes (thx xZise)
+- Added SignalProcessor to Fasa's Pioneer probe
+
+
+Version 1.6.5
+========================================
+Released May 18, 2015
+
+Bug fixes
+--------------------
+- We've fixed an issue while loading a saved maneuver command
+- We've fixed an issue while loading a saved cancel command
+- Queued commands will now sorted correctly
+- The flight computer will no longer goes crazy if a queued BaseEvent throws an exception
+- We've fixed the SoundingRockets config file
+- Satellite/Stations will now properly re-registered as a satellite after unloading (>2.5km distance)
+
+General
+--------------------
+- Textures are now converted to DDS (thx @InsanePlumber)
+- We'll no longer throttling back the timewarp if you are on phys.warp
+- We'll no longer fix the "roll" position for maneuver, orbit und surface commands
+
+
+Version 1.6.4
+========================================
+Released May 07, 2015
+
+- KSP 1.0 compatibility
+
+Flightcomputer
+--------------------
+- The +/- Buttons on the pitch/head and roll fields are now trigger buttons. You can now hold the mouse button to increase/decrease the value
+- You can now use the mousewheel over the pitch/head and roll input fields to increase/decrease the value
+
+General
+--------------------
+- Added configs for Sounding Rockets
+- A bunch of cleanup
+- Modulemanager update to v2.6.3
+- We'll now support [ControlLock-Addon](http://forum.kerbalspaceprogram.com/threads/108561-0-90-%28Apr12-15%29-Control-Lock-Input-text-into-text-fields-without-issuing-commands-to-your-vessel) created by Diazo
+- Added the LLLMicrochip to the LLL_Probes.cfg
+- Maneuver burns are now 100% precise by decreasing the throttle at the end of the burn
+
+Modders
+--------------------
+- Modders can now add their own commands directly to the flightcomputer queue (experimental) For more infos please see this [thread](https://github.com/RemoteTechnologiesGroup/RemoteTech/issues/233)
+- We added a new method `HasLocalControl(GUID): bool` to check the vessel is local controlled or not
+
+Bugfixes
+--------------------
+- We fixed the double definition of LLLCommPole2 on the LLL_Antennas.cfg
+- We fixed inaccurate maneuver burns with monoprop engines
+
+
 Version 1.6.3
 ========================================
 Released February 06, 2015

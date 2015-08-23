@@ -6,6 +6,7 @@ namespace RemoteTech.FlightComputer.Commands
     {
         double TimeStamp { get; set; }
         double ExtraDelay { get; set; }
+        Guid CmdGuid { get; }
         double Delay { get; }
         // The command description displayed in the flight computer
         String Description { get; }
@@ -18,6 +19,6 @@ namespace RemoteTech.FlightComputer.Commands
         void Abort();
         /// 
         void Save(ConfigNode n, FlightComputer fc);
-        void Load(ConfigNode n, FlightComputer fc);
+        bool Load(ConfigNode n, FlightComputer fc);
     }
 }

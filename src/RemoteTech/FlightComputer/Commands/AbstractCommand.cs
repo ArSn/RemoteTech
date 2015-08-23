@@ -5,6 +5,7 @@ namespace RemoteTech.FlightComputer.Commands
     public abstract class AbstractCommand : ICommand
     {
         public double TimeStamp { get; set; }
+        public Guid CmdGuid { get; private set; }
         public virtual double ExtraDelay { get; set; }
         public virtual double Delay { get { return Math.Max(TimeStamp - RTUtil.GameTime, 0); } }
         public virtual String Description {
@@ -23,6 +24,14 @@ namespace RemoteTech.FlightComputer.Commands
         public abstract String ShortName { get; }
         public virtual int Priority { get { return 255; } }
 
+        /// <summary>
+        /// Creates a new Guid for the current command
+        /// </summary>
+        public AbstractCommand()
+        {
+            this.CmdGuid = Guid.NewGuid();
+        }
+
         // true: move to active.
         public virtual bool Pop(FlightComputer f) { return false; }
 
@@ -39,28 +48,27 @@ namespace RemoteTech.FlightComputer.Commands
         /// <summary>
         /// Save the basic informations for every command.
         /// </summary>
-        /// <param name="n">Node to save in</param>
-        /// <param name="fc">Current flightcomputer</param>
-        public virtual void Save(ConfigNode n, FlightComputer fc)
+        /// <param name="node">Node to save in</param>
+        /// <param name="computer">Current flightcomputer</param>
+        public virtual void Save(ConfigNode node, FlightComputer computer)
         {
-            ConfigNode save = new ConfigNode(this.GetType().Name);
             try
             {
                 // try to serialize 'this'
-                ConfigNode.CreateConfigFromObject(this, 0, save);
+                ConfigNode.CreateConfigFromObject(this, 0, node);
             }
             catch (Exception) {}
 
-            if (Delay == 0) {
+            if (this.Delay == 0) {
                 // only save the current gametime if we have no signal delay.
                 // We need this to calculate the correct delta time for the
                 // ExtraDelay if we come back to this satellite.
-                TimeStamp = RTUtil.GameTime;
+                this.TimeStamp = RTUtil.GameTime;
             }
 
-            save.AddValue("TimeStamp", TimeStamp);
-            save.AddValue("ExtraDelay", ExtraDelay);
-            n.AddNode(save);
+            node.AddValue("TimeStamp", this.TimeStamp);
+            node.AddValue("ExtraDelay", this.ExtraDelay);
+            node.AddValue("CmdGuid", this.CmdGuid);
         }
 
         /// <summary>
@@ -68,7 +76,8 @@ namespace RemoteTech.FlightComputer.Commands
         /// </summary>
         /// <param name="n">Node with the command infos</param>
         /// <param name="fc">Current flightcomputer</param>
-        public virtual void Load(ConfigNode n, FlightComputer fc)
+        /// <returns>true - loaded successfull</returns>
+        public virtual bool Load(ConfigNode n, FlightComputer fc)
         {
             // nothing
             if (n.HasValue("TimeStamp"))
@@ -79,6 +88,12 @@ namespace RemoteTech.FlightComputer.Commands
             {
                 ExtraDelay = double.Parse(n.GetValue("ExtraDelay"));
             }
+            if (n.HasValue("CmdGuid"))
+            {
+                this.CmdGuid = new Guid(n.GetValue("CmdGuid"));
+            }
+
+            return true;
         }
         
         /// <summary>
@@ -101,13 +116,19 @@ namespace RemoteTech.FlightComputer.Commands
                 case "CancelCommand":       { command = new CancelCommand(); break; }
                 case "TargetCommand":       { command = new TargetCommand(); break; }
                 case "EventCommand":        { command = new EventCommand(); break; }
+                case "DriveCommand":        { command = new DriveCommand(); break; }
+                case "ExternalAPICommand":  { command = new ExternalAPICommand(); break; }
             }
 
             if (command != null)
             {
                 ConfigNode.LoadObjectFromConfig(command, n);
                 // additional loadings
-                command.Load(n, fc);
+                var result = command.Load(n, fc);
+                RTLog.Verbose("Loading command {0}({1})={2}", RTLogLevel.LVL1, n.name, command.CmdGuid, result);
+                // delete command if we can't load the command correctlys
+                if (result == false)
+                    command = null;
             }
 
             return command;
